@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import axios from '../config/axios'
 
 const Login = () => {
   const navigate = useNavigate()
@@ -13,15 +14,37 @@ const Login = () => {
     setError(null)
     setLoading(true)
     try {
-      // Placeholder: replace with real API call
-      await new Promise((res) => setTimeout(res, 800))
-      // simple validation demo
-      if (!email || !password) throw new Error('Please enter email and password')
+     
+      if (!email || !password) {
+        setError('Please enter email and password')
+        setLoading(false)
+        return
+      }
 
-      // On success navigate to dashboard or home
+      const res = await axios.post('/user/login', { email, password })
+
+      // store token if returned
+      if (res?.data?.token) {
+        localStorage.setItem('token', res.data.token)
+      }
+
+      await new Promise((resDelay) => setTimeout(resDelay, 300))
+
       navigate('/')
     } catch (err) {
-      setError(err.message || 'Login failed')
+    
+      if (err.response && err.response.data) {
+        const data = err.response.data
+        if (data.errors && Array.isArray(data.errors)) {
+          setError(data.errors.map((d) => d.msg || d.message).join(', '))
+        } else if (data.error) {
+          setError(data.error)
+        } else {
+          setError(JSON.stringify(data))
+        }
+      } else {
+        setError(err.message || 'Network error')
+      }
     } finally {
       setLoading(false)
     }

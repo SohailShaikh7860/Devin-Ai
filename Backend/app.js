@@ -3,11 +3,16 @@ import morgan from 'morgan';
 import connectDB from './DB/db.js';
 import userRoutes from './routes/userRoutes.js';
 import cookie from 'cookie-parser';
+import cors from 'cors';
 
 connectDB();
 
 const app = express();
 
+app.use(cors({
+  credentials: true,
+  origin: process.env.FRONTEND_URL
+}));
 app.use(cookie());
 app.use(morgan('dev'));
 app.use(express.json());

@@ -1,27 +1,38 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import axios from '../config/axios'
 
 const Register = () => {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
+//   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
-    if (password !== confirm) return setError('Passwords do not match')
+    
     setLoading(true)
     try {
-      // Placeholder: replace with real registration API call
-      await new Promise((res) => setTimeout(res, 800))
-      if (!email || !password) throw new Error('Please fill all fields')
-      // On success, navigate to login
+      if (!email || !password) {
+        setError('Please fill all fields')
+        setLoading(false)
+        return
+      }
+
+      const res = await axios.post('/user/register', { email, password })
+
+      if (res?.data?.token) {
+        localStorage.setItem('token', res.data.token)
+      }
+
+      await new Promise((resDelay) => setTimeout(resDelay, 300))
+
       navigate('/login')
     } catch (err) {
-      setError(err.message || 'Registration failed')
+      console.log(err);
     } finally {
       setLoading(false)
     }
