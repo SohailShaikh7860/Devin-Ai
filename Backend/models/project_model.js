@@ -10,10 +10,12 @@ const projectSchema = new mongoose.Schema({
         unique:[true,'Project name must be unique'],
     },
 
-    users:{
+    users:[
+    {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
     }
+    ]
 })
 
 const Project = mongoose.model('Project', projectSchema)
