@@ -7,11 +7,29 @@ const Project = () => {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [project,setProject] = useState(Location.state?.project || null);
   const [users, setUsers] = useState([]);
   const [isAddingCollaborators, setIsAddingCollaborators] = useState(false);
   const [addCollaboratorsError, setAddCollaboratorsError] = useState(null);
 
   useEffect(() => {
+    const projectId = Location.state?.project?._id || Location.state?.projectId;
+    
+    if (!projectId) {
+      console.error("No project ID found in location state");
+      return;
+    }
+
+    axios.get(`project/get-project/${projectId}`)
+      .then((response) => {
+        console.log("Project response:", response.data);
+        console.log("Project users:", response.data.project?.users);
+        setProject(response.data.project);
+      })
+      .catch((error) => {
+        console.error("Error fetching project:", error);
+      });
+
     axios
       .get("/user/all-users")
       .then((response) => {
@@ -157,17 +175,18 @@ const Project = () => {
           </button>
         </header>
         <div className="p-4">
-          {/* Team members list will go here */}
-          <p className="text-sm text-gray-600">No team members yet</p>
-        </div>
-
-        <div className="users flex flex-col gap-2">
-          <div className="user flex gap-2 items-center cursor-pointer hover:bg-slate-300 p-2">
-            <div className="aspect-square rounded-full w-fit h-fit flex items-center justify-center p-5 bg-slate-700">
-              <i className="ri-user-fill text-black absolute"></i>
-            </div>
-
-            <h1 className="font-semibold text-black text-lg">Username</h1>
+          <div className="users flex flex-col gap-2">
+            {project && project.users && project.users.map((user, index) => (
+              <div key={index} className="user flex gap-2 items-center cursor-pointer hover:bg-slate-300 p-2 rounded">
+                <div className="aspect-square rounded-full w-10 h-10 flex items-center justify-center bg-slate-700 relative">
+                  <i className="ri-user-fill text-white"></i>
+                </div>
+                <h1 className="font-semibold text-black text-lg">{user.email || 'User'}</h1>
+              </div>
+            ))}
+            {(!project || !project.users || project.users.length === 0) && (
+              <p className="text-sm text-gray-600">No team members yet</p>
+            )}
           </div>
         </div>
       </div>

@@ -80,9 +80,9 @@ const getProjectByIdController = async (req, res) => {
   const { projectId } = req.params;
 
   try {
-    const projects = await getProjectById({ projectId });
+    const project = await getProjectById({ projectId });
 
-    return res.status(200).json({ projects });
+    return res.status(200).json({ project });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
