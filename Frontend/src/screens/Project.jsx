@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import axios from "../config/axios";
 import { initializeSocket, receiveMessage,sendMessage } from "../config/socket";
+import { useAppContext } from "../context/context";
 
 const Project = () => {
   const Location = useLocation();
@@ -12,6 +13,8 @@ const Project = () => {
   const [users, setUsers] = useState([]);
   const [isAddingCollaborators, setIsAddingCollaborators] = useState(false);
   const [addCollaboratorsError, setAddCollaboratorsError] = useState(null);
+  const [messageInput, setMessageInput] = useState("");
+  const { user } = useAppContext();
 
   useEffect(() => {
     const projectId = Location.state?.project?._id || Location.state?.projectId;
@@ -21,7 +24,12 @@ const Project = () => {
       return;
     }
 
-    initializeSocket();
+    initializeSocket(projectId);
+
+    // receiveMessage('message',(data)=>{
+    //   console.log(data);
+      
+    // })
 
     axios.get(`project/get-project/${projectId}`)
       .then((response) => {
@@ -46,6 +54,22 @@ const Project = () => {
       });
   }, []);
 
+   const send = ()=>{
+      if (!messageInput.trim()) return;
+      
+      if (!user || !user._id) {
+        console.error("User not loaded");
+        return;
+      }
+       
+      sendMessage('message',{
+        message: messageInput,
+        sender: user._id
+      })
+
+      setMessageInput("");
+    }
+    
   const addCollaborators = async () => {
     if (selectedUserIds.length === 0) {
       setAddCollaboratorsError("Please select at least one user");
@@ -152,10 +176,13 @@ const Project = () => {
             <input
               type="text"
               name=""
+              value={messageInput}
+              onChange={(e)=> setMessageInput(e.target.value)}
               placeholder="Enter Message"
               className="p-3 px-5 border-none outline-none bg-white text-black grow"
             />
-            <button className="cursor-pointer bg-black px-3">
+
+            <button className="cursor-pointer bg-black px-3" onClick={send}>
               <i className="ri-send-plane-fill text-white"></i>
             </button>
           </div>
