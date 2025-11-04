@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, createRef } from "react";
 import { useLocation } from "react-router-dom";
 import axios from "../config/axios";
-import { initializeSocket, receiveMessage,sendMessage } from "../config/socket";
+import { initializeSocket, receiveMessage, sendMessage, disconnectSocket } from "../config/socket";
 import { useAppContext } from "../context/context";
 
 const Project = () => {
@@ -15,6 +15,37 @@ const Project = () => {
   const [addCollaboratorsError, setAddCollaboratorsError] = useState(null);
   const [messageInput, setMessageInput] = useState("");
   const { user } = useAppContext();
+  const messageRef = createRef();
+
+  const appendIncomingMessage = (data) => {
+    const messageBox = document.querySelector('.message-box');
+    
+    if (!messageBox) return;
+
+    const message = document.createElement('div');
+    message.classList.add('message','max-w-56','flex','flex-col','text-black','p-2','bg-white','rounded-md');
+    message.innerHTML = `
+      <small class="opacity-65 text-xs">${data.senderEmail || 'Unknown'}</small>
+      <p class="text-sm">${data.message}</p>
+    `;
+    messageBox.appendChild(message);
+    messageBox.scrollTop = messageBox.scrollHeight;
+  };
+
+  const appendOutgoingMessage = (data) => {
+    const messageBox = document.querySelector('.message-box');
+    
+    if (!messageBox) return;
+
+    const message = document.createElement('div');
+    message.classList.add('ml-auto','max-w-56','flex','flex-col','text-black','p-2','bg-white','rounded-md');
+    message.innerHTML = `
+      <small class="opacity-65 text-xs">${data.senderEmail || 'Unknown'}</small>
+      <p class="text-sm">${data.message}</p>
+    `;
+    messageBox.appendChild(message);
+    messageBox.scrollTop = messageBox.scrollHeight;
+  }
 
   useEffect(() => {
     const projectId = Location.state?.project?._id || Location.state?.projectId;
@@ -24,12 +55,16 @@ const Project = () => {
       return;
     }
 
-    initializeSocket(projectId);
+    const socket = initializeSocket(projectId);
 
-    // receiveMessage('message',(data)=>{
-    //   console.log(data);
-      
-    // })
+    // Define the message handler
+    const handleMessage = (data) => {
+      console.log("Received message:", data);
+      appendIncomingMessage(data);
+    };
+
+    // Register the listener
+    receiveMessage('message', handleMessage);
 
     axios.get(`project/get-project/${projectId}`)
       .then((response) => {
@@ -52,6 +87,14 @@ const Project = () => {
         console.error("Error fetching users:", error);
         setUsers([]); // Ensure users is always an array
       });
+
+    // Cleanup function to remove event listener and disconnect socket when component unmounts
+    return () => {
+      if (socket) {
+        socket.off('message', handleMessage);
+        disconnectSocket();
+      }
+    };
   }, []);
 
    const send = ()=>{
@@ -61,11 +104,16 @@ const Project = () => {
         console.error("User not loaded");
         return;
       }
-       
-      sendMessage('message',{
+      
+      const messageData = {
         message: messageInput,
-        sender: user._id
-      })
+        sender: user._id,
+        senderEmail: user.email
+      };
+       
+      sendMessage('message', messageData);
+
+      appendOutgoingMessage(messageData);
 
       setMessageInput("");
     }
@@ -159,9 +207,9 @@ const Project = () => {
           </button>
         </header>
 
-        <div className="conversation-area grow flex flex-col">
-          <div className="message-box grow flex flex-col gap-3 p-2">
-            <div className="incoming text-black p-2 bg-white flex flex-col w-fit rounded-md max-w-56">
+        <div className="conversation-area pt-14 pb-10 flex-grow flex flex-col h-screen relative">
+          <div className="message-box p-1 flex-grow flex flex-col gap-1 overflow-auto max-h-full scrollbar-hide" ref={messageRef}>
+            {/* <div className="incoming text-black p-2 bg-white flex flex-col w-fit rounded-md max-w-56">
               <small className="opacity-65 text-xs">example@gmail.com</small>
               <p className="text-sm">Hello!</p>
             </div>
@@ -169,10 +217,10 @@ const Project = () => {
             <div className="Outgoing ml-auto text-black p-2 bg-white flex flex-col w-fit rounded-md max-w-56">
               <small className="opacity-65 text-xs">example@gmail.com</small>
               <p className="text-sm">Hey!</p>
-            </div>
+            </div> */}
           </div>
 
-          <div className="inputField w-full flex ">
+          <div className="inputField w-full flex absolute bottom-0">
             <input
               type="text"
               name=""

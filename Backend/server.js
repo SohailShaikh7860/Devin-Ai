@@ -51,6 +51,12 @@ io.on('connection',(socket)=>{
       
       socket.broadcast.to(socket.Project._id.toString()).emit('message',data);
      })
+
+
+     socket.on('disconnect',()=>{
+      console.log('Socket disconnected');
+      socket.leave(socket.Project._id.toString());
+     })
 })
 
 
