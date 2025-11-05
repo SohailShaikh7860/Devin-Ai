@@ -1,8 +1,9 @@
-import React, { useState, useEffect, createRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import axios from "../config/axios";
 import { initializeSocket, receiveMessage, sendMessage, disconnectSocket } from "../config/socket";
 import { useAppContext } from "../context/context";
+import Markdown from 'markdown-to-jsx'
 
 const Project = () => {
   const Location = useLocation();
@@ -15,37 +16,26 @@ const Project = () => {
   const [addCollaboratorsError, setAddCollaboratorsError] = useState(null);
   const [messageInput, setMessageInput] = useState("");
   const { user } = useAppContext();
-  const messageRef = createRef();
+  const messageRef = useRef();
 
-  const appendIncomingMessage = (data) => {
-    const messageBox = document.querySelector('.message-box');
-    
-    if (!messageBox) return;
+  // messages state replaces DOM innerHTML manipulation
+  const [messages, setMessages] = useState([]);
 
-    const message = document.createElement('div');
-    message.classList.add('message','max-w-56','flex','flex-col','text-black','p-2','bg-white','rounded-md');
-    message.innerHTML = `
-      <small class="opacity-65 text-xs">${data.senderEmail || 'Unknown'}</small>
-      <p class="text-sm">${data.message}</p>
-    `;
-    messageBox.appendChild(message);
-    messageBox.scrollTop = messageBox.scrollHeight;
+  // auto-scroll when messages change
+  useEffect(() => {
+    const box = messageRef.current;
+    if (box) {
+      box.scrollTop = box.scrollHeight;
+    }
+  }, [messages]);
+
+  const pushIncomingMessage = (data) => {
+    setMessages((prev) => [...prev, { ...data, incoming: true }]);
   };
 
-  const appendOutgoingMessage = (data) => {
-    const messageBox = document.querySelector('.message-box');
-    
-    if (!messageBox) return;
-
-    const message = document.createElement('div');
-    message.classList.add('ml-auto','max-w-56','flex','flex-col','text-black','p-2','bg-white','rounded-md');
-    message.innerHTML = `
-      <small class="opacity-65 text-xs">${data.senderEmail || 'Unknown'}</small>
-      <p class="text-sm">${data.message}</p>
-    `;
-    messageBox.appendChild(message);
-    messageBox.scrollTop = messageBox.scrollHeight;
-  }
+  const pushOutgoingMessage = (data) => {
+    setMessages((prev) => [...prev, { ...data, incoming: false }]);
+  };
 
   useEffect(() => {
     const projectId = Location.state?.project?._id || Location.state?.projectId;
@@ -60,7 +50,7 @@ const Project = () => {
     // Define the message handler
     const handleMessage = (data) => {
       console.log("Received message:", data);
-      appendIncomingMessage(data);
+      pushIncomingMessage(data);
     };
 
     // Register the listener
@@ -111,9 +101,9 @@ const Project = () => {
         senderEmail: user.email
       };
        
-      sendMessage('message', messageData);
+  sendMessage('message', messageData);
 
-      appendOutgoingMessage(messageData);
+  pushOutgoingMessage(messageData);
 
       setMessageInput("");
     }
@@ -209,15 +199,21 @@ const Project = () => {
 
         <div className="conversation-area pt-14 pb-10 flex-grow flex flex-col h-screen relative">
           <div className="message-box p-1 flex-grow flex flex-col gap-1 overflow-auto max-h-full scrollbar-hide" ref={messageRef}>
-            {/* <div className="incoming text-black p-2 bg-white flex flex-col w-fit rounded-md max-w-56">
-              <small className="opacity-65 text-xs">example@gmail.com</small>
-              <p className="text-sm">Hello!</p>
-            </div>
-
-            <div className="Outgoing ml-auto text-black p-2 bg-white flex flex-col w-fit rounded-md max-w-56">
-              <small className="opacity-65 text-xs">example@gmail.com</small>
-              <p className="text-sm">Hey!</p>
-            </div> */}
+            {messages.map((m, idx) => {
+              const isIncoming = m.incoming !== false;
+              const isAi = m.sender === 'ai-bot' || m.sender?._id === 'ai-bot';
+              return (
+                <div
+                  key={idx}
+                  className={`text-black p-2 bg-white flex flex-col w-fit rounded-md max-w-56 ${!isIncoming ? 'ml-auto' : ''}`}
+                >
+                  <small className="opacity-65 text-xs">{m.senderEmail || m.sender?.email || 'Unknown'}</small>
+                  <div className="text-sm overflow-auto bg-slate-900 text-white">
+                    {isAi ? <Markdown>{m.message}</Markdown> : <span>{m.message}</span>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="inputField w-full flex absolute bottom-0">

@@ -13,11 +13,10 @@ const getResult = async(req, res)=>{
         }
         
         const result = await ai.main(prompt);
+
+        // const client = result.replace(/```[a-z]*\n?([\s\S]*?)```/g, '$1').trim();
         
-        res.json({ 
-            success: true,
-            result: result 
-        });
+        res.send( result );
     } catch (error) {
         console.error('Error fetching AI result:', error);
         res.status(500).json({ 
