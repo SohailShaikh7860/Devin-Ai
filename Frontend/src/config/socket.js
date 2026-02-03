@@ -21,13 +21,12 @@ export const initializeSocket = (projectId) => {
     console.log('Creating new socket connection for project:', projectId);
     
     // Create new socket connection with aggressive reconnection
+    // Cookies will be sent automatically with withCredentials
     socketInstance = socket(import.meta.env.VITE_API_URL, {
-        auth: {
-            token: localStorage.getItem('token')
-        },
         query: {
             projectId
         },
+        withCredentials: true, // Send cookies automatically
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,

@@ -16,6 +16,15 @@ const createUserController = async(req,res)=>{
         const token = await user.generateAuthToken();
 
         delete user._doc.password;
+        
+        // Set httpOnly cookie
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
+        
         res.status(201).json({ user, token });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -48,6 +57,14 @@ const loginController = async(req,res)=>{
 
         delete user._doc.password;
 
+        // Set httpOnly cookie
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
+
         res.status(200).json({user, token});
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -66,9 +83,18 @@ const profileController = async(req,res)=>{
 const logOutController = async(req,res)=>{
     try {
 
-        const token = req.cookies.token || req.header('Authorization').replace('Bearer ','');
+        const token = req.cookies.token || req.header('Authorization')?.replace('Bearer ','');
 
-        redisClient.set(token,"logout",'EX',60*60*24); // Expire in 24 hours
+        if(token){
+            redisClient.set(token,"logout",'EX',60*60*24); // Expire in 24 hours
+        }
+
+        // Clear the cookie
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+        });
 
         res.status(200).json({message:'Logged out successfully'});
         

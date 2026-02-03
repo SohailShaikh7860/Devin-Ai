@@ -26,9 +26,9 @@ const Register = () => {
 
       const res = await axios.post('/user/register', { email, password })
 
-      if (res?.data?.token) {
-        localStorage.setItem('token', res.data.token)
-        if (res.data.user) setUser(res.data.user)
+      // Cookie is set automatically by backend
+      if (res.data.user) {
+        setUser(res.data.user)
       }
 
       await new Promise((resDelay) => setTimeout(resDelay, 300))

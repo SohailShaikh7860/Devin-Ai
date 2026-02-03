@@ -11,13 +11,37 @@ const PORT = process.env.PORT || 8001;
 const server = http.createServer(app);
 const io = new Server(server,{
   cors: {
-    origin: '*'
+    origin: process.env.FRONTEND_URL || '*',
+    credentials: true
   }
 });
 
+// Helper function to parse cookies from cookie header string
+const parseCookies = (cookieHeader) => {
+  const cookies = {};
+  if (cookieHeader) {
+    cookieHeader.split(';').forEach(cookie => {
+      const parts = cookie.trim().split('=');
+      if (parts.length === 2) {
+        cookies[parts[0]] = parts[1];
+      }
+    });
+  }
+  return cookies;
+};
+
 io.use(async(socket, next) => {
   try {
-    const token = socket.handshake.auth.token || socket.handshake.headers['authorization']?.split(' ')[1];
+    // Try to get token from auth, authorization header, or cookies
+    let token = socket.handshake.auth.token || 
+                socket.handshake.headers['authorization']?.split(' ')[1];
+    
+    // If no token found, try reading from cookies
+    if (!token) {
+      const cookieHeader = socket.handshake.headers.cookie;
+      const cookies = parseCookies(cookieHeader);
+      token = cookies.token;
+    }
 
     const projectId = socket.handshake.query.projectId;
 

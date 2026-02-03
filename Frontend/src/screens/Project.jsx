@@ -16,7 +16,7 @@ const Project = () => {
   const [isAddingCollaborators, setIsAddingCollaborators] = useState(false);
   const [addCollaboratorsError, setAddCollaboratorsError] = useState(null);
   const [messageInput, setMessageInput] = useState("");
-  const { user } = useAppContext();
+  const { user, setUser } = useAppContext();
   const messageRef = useRef();
   const [fileTree, setFileTree] = useState({
     // "app.js": { file: { contents: "// Welcome to Devin AI!\nconsole.log('Hello, Devin AI!');\n" } },
@@ -54,7 +54,30 @@ const Project = () => {
     setMessages((prev) => [...prev, { ...data, incoming: false }]);
   };
 
+  // Fetch user profile if not available in context
   useEffect(() => {
+    const fetchUser = async () => {
+      if (!user || !user._id) {
+        try {
+          const response = await axios.get('/user/profile');
+          if (response.data && response.data.user) {
+            setUser(response.data.user);
+          }
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error);
+        }
+      }
+    };
+    fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  useEffect(() => {
+    // Don't initialize if user is not loaded
+    if (!user || !user._id) {
+      return;
+    }
+
     const projectId = Location.state?.project?._id || Location.state?.projectId;
     
     if (!projectId) {
@@ -157,7 +180,7 @@ const Project = () => {
         disconnectSocket();
       }
     };
-  }, []);
+  }, [user]);
 
    const send = ()=>{
       if (!messageInput.trim()) return;
@@ -248,6 +271,15 @@ const Project = () => {
       }
     });
   };
+
+  // Show loading state if user is not loaded
+  if (!user || !user._id) {
+    return (
+      <main className="h-screen w-screen flex items-center justify-center bg-gray-900">
+        <div className="text-white text-lg">Loading user...</div>
+      </main>
+    );
+  }
 
   return (
     <main className="h-screen w-screen flex relative">

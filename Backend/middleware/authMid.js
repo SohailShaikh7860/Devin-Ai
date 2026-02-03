@@ -3,7 +3,9 @@ import { redisClient } from "../services/Redis_Services.js";
 
 const authUser = async(req,res,next)=>{
     try {
-        const token = req.cookies.token || req.header('Authorization').replace('Bearer ','');
+        const authHeader = req.header('Authorization');
+        const token = req.cookies.token || (authHeader ? authHeader.replace('Bearer ', '') : null);
+        
         if(!token){
             return res.status(401).json({error:'Access denied. No token provided'});
         }
@@ -11,7 +13,11 @@ const authUser = async(req,res,next)=>{
         const isBlacklisted = await redisClient.get(token);
 
         if (isBlacklisted) {
-            res.cookies('token','');
+            res.clearCookie('token', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax'
+            });
             return res.status(401).json({ error: 'Token is blacklisted' });
         }
 
