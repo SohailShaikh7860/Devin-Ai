@@ -1,9 +1,10 @@
 import axios from 'axios'
 
-const DEFAULT_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8001'
+const DEFAULT_BASE = import.meta.env.VITE_API_URL;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 const axiosInstance = axios.create({
-    baseURL: DEFAULT_BASE,
+    baseURL: BACKEND_URL || DEFAULT_BASE,
     withCredentials: true, // Send cookies with requests
 })
 
