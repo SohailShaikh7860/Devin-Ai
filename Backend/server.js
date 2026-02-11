@@ -9,9 +9,17 @@ import { main } from './services/ai_service.js';
 const PORT = process.env.PORT || 8001;
 
 const server = http.createServer(app);
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://ai-realtime-chat-red.vercel.app',
+  'https://ai-realtime-chat-git-main-sohailshaikh7860s-projects.vercel.app',
+  'http://localhost:5173',
+].filter(Boolean);
+
 const io = new Server(server,{
   cors: {
-    origin: process.env.FRONTEND_URL || '*',
+    origin: allowedOrigins,
     credentials: true
   }
 });

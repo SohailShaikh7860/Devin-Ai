@@ -11,9 +11,29 @@ connectDB();
 
 const app = express();
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://ai-realtime-chat-red.vercel.app',
+  'https://ai-realtime-chat-git-main-sohailshaikh7860s-projects.vercel.app',
+  'http://localhost:5173', 
+  'http://localhost:3000' 
+].filter(Boolean);
+
 app.use(cors({
   credentials: true,
-  origin: process.env.FRONTEND_URL
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+      return callback(null, true);
+    }
+    
+    return callback(new Error('Not allowed by CORS'), false);
+  }
 }));
 app.use(cookie());
 app.use(morgan('dev'));
