@@ -18,6 +18,16 @@ const crossOriginIsolation = () => ({
       res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp')
       next()
     })
+  },
+  generateBundle() {
+    // Ensure these headers are applied during build for production
+    this.emitFile({
+      type: 'asset',
+      fileName: '_headers',
+      source: `/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp`
+    })
   }
 })
 
@@ -30,5 +40,13 @@ export default defineConfig({
   ],
   optimizeDeps: {
     exclude: ['@webcontainer/api']
+  },
+  build: {
+    target: 'esnext',
+    rollupOptions: {
+      output: {
+        format: 'es'
+      }
+    }
   }
 })
