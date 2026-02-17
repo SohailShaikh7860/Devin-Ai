@@ -1,20 +1,85 @@
 # Devin AI
 
-A **collaborative, AI-powered coding platform** where teams can build projects together with real-time chat and in-browser code generation. Use `@ai` in messages to get AI assistance (Google Gemini or Hugging Face), generate file trees, and run code via WebContainer—all within a shared project workspace.
+<div align="center">
+
+**A collaborative, AI-powered coding platform where teams build projects together**
+
+Real-time collaboration • AI Code Generation • In-Browser Execution
+
+[![React](https://img.shields.io/badge/React-19.1-61DAFB?logo=react)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Database-47A248?logo=mongodb)](https://www.mongodb.com/)
+[![Socket.io](https://img.shields.io/badge/Socket.io-Real--time-010101?logo=socket.io)](https://socket.io/)
+
+</div>
+
+---
+
+## What is Devin AI?
+
+Devin AI is a **collaborative, AI-powered coding platform** where teams can build projects together with real-time chat and in-browser code generation. Use `@ai` in messages to get AI assistance (Google Gemini, Hugging Face, or OpenAI), generate complete file trees, and run code via WebContainer—all within a shared project workspace.
+
+**Perfect for:** Team collaboration, prototyping, learning, and AI-assisted development.
 
 ---
 
 ## Features
 
-- **User authentication** — Register, login, JWT-based sessions, logout with token blacklisting (Redis)
-- **Projects** — Create projects, list yours, add collaborators
-- **Real-time collaboration** — Socket.io chat per project; messages broadcast to all project members
-- **AI coding assistant** — Type `@ai` + your prompt to trigger AI. Supports:
-  - **Google Gemini** (`gemini-2.0-flash-001`) — default
-  - **Hugging Face** (`Qwen/Qwen2.5-Coder-32B-Instruct`)
-- **Code generation** — AI returns JSON with `text` (explanation) and optional `fileTree` (files with contents)
-- **In-browser IDE** — File tree, tabs, and code editor. Generated files are mounted in a **WebContainer** for execution
-- **Markdown AI replies** — Assistant messages rendered with `markdown-to-jsx`
+### **Authentication & Security**
+- Secure user registration and login
+- JWT-based sessions with token blacklisting (Redis)
+- Password hashing with bcrypt
+- Protected routes and API endpoints
+
+### **Project Management**
+- Create unlimited projects
+- Add collaborators to projects
+- Real-time project synchronization
+- Project-based workspaces
+
+### **Real-Time Collaboration**
+- Socket.io-powered live chat
+- Per-project chat rooms
+- Message broadcasting to all team members
+- Connection status indicators
+
+### **AI Coding Assistant**
+- **Multi-AI Support:** Choose between Google Gemini, Hugging Face, or OpenAI
+- Type `@ai` + your prompt to trigger AI assistance
+- **Code Generation:** AI creates complete file trees with all necessary files
+- **Markdown Support:** Beautiful formatting for AI responses
+- **Smart Responses:** Context-aware code suggestions
+
+### **In-Browser IDE**
+- Monaco Editor with syntax highlighting
+- File tree navigation
+- Tab-based file management
+- Multi-language support (JavaScript, Python, HTML, CSS, etc.)
+- Auto-save functionality
+
+### **Code Execution**
+- WebContainer-powered in-browser execution
+- Terminal emulator
+- Real-time output streaming
+- Run code without leaving the browser
+
+### **Advanced Features**
+- AI request rate limiting (10 req/min, 5s cooldown)
+- Automatic error recovery
+- Socket reconnection handling
+- Secure WebSocket connections
+
+---
+
+## Screenshots
+
+### Dashboard - Project Management
+![Dashboard](Github/Dashboard.png)
+*Create and manage your collaborative projects*
+
+### Project IDE - Real-time Collaboration
+![Project IDE](Github/Project.png)
+*Code editor with AI assistant, real-time chat, and in-browser execution*
 
 ---
 
