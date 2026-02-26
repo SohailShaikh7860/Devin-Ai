@@ -96,9 +96,7 @@ const Home = () => {
               key={project._id}
               className="project p-4 border border-gray-700 rounded-md cursor-pointer flex flex-col gap-2 min-w-52 hover:bg-gray-700 bg-gray-800 text-white"
               onClick={() =>
-                navigate(`/project/`, {
-                  state: { projectId: project._id },
-                })
+                navigate(`/project/${project._id}`)
               }
             >
               <h2 className="font-semibold">{project.name}</h2>

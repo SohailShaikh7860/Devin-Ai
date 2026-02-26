@@ -1,5 +1,5 @@
 import Project from "../models/project_model.js";
-import { createProject,addUserToProject,getAllProjects,getProjectById } from "../services/project_service.js";
+import { createProject,addUserToProject,getAllProjects,getProjectById,updateFileTree } from "../services/project_service.js";
 import { validationResult } from "express-validator";
 import userModel from "../models/userModel.js";
 
@@ -88,4 +88,26 @@ const getProjectByIdController = async (req, res) => {
   }
 }
 
-export { createProjectController, getAllProjectsController, addUserToProjectController, getProjectByIdController };
+const updateFileTreeController = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const { projectId, fileTree } = req.body;
+
+    if (!req.user || !req.user.email) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const project = await updateFileTree({ projectId, fileTree });
+
+    return res.status(200).json({ project });
+  } catch (error) {
+    console.error("updateFileTree Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export { createProjectController, getAllProjectsController, addUserToProjectController, getProjectByIdController, updateFileTreeController };

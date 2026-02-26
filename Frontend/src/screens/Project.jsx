@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "../config/axios";
 import { initializeSocket, receiveMessage, sendMessage, disconnectSocket } from "../config/socket";
 import { useAppContext } from "../context/context";
@@ -10,6 +10,7 @@ import Editor from '@monaco-editor/react';
 
 const Project = () => {
   const Location = useLocation();
+  const { projectId } = useParams();
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState([]);
@@ -61,6 +62,34 @@ const Project = () => {
       box.scrollTop = box.scrollHeight;
     }
   }, [messages]);
+
+  const saveTimerRef = useRef(null);
+
+  // Save fileTree — localStorage (instant) + backend (persistent)
+  const saveFileTree = useCallback((updatedFileTree) => {
+    if (!projectId || !updatedFileTree || Object.keys(updatedFileTree).length === 0) return;
+
+    // 1. Save to localStorage immediately — survives refresh even if backend fails
+    try {
+      localStorage.setItem(`fileTree_${projectId}`, JSON.stringify(updatedFileTree));
+    } catch (e) {
+      console.error('localStorage save failed:', e);
+    }
+
+    // 2. Save to backend via REST API (debounced)
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      axios.put('/project/update-file-tree', {
+        projectId,
+        fileTree: updatedFileTree,
+      })
+        .then(() => console.log('[FileTree] Saved to DB ✓'))
+        .catch((err) => console.error('[FileTree] DB save failed:', err.message));
+    }, 1000);
+
+    // 3. Broadcast to teammates via socket
+    sendMessage('update-file-tree', { fileTree: updatedFileTree });
+  }, [projectId]);
 
   const pushIncomingMessage = (data) => {
     setMessages((prev) => [...prev, { ...data, incoming: true }]);
@@ -175,10 +204,8 @@ const Project = () => {
       return;
     }
 
-    const projectId = Location.state?.project?._id || Location.state?.projectId;
-    
     if (!projectId) {
-      console.error("No project ID found in location state");
+      console.error("No project ID found in URL params");
       setSocketError("Project ID not found");
       return;
     }
@@ -249,7 +276,6 @@ const Project = () => {
       const fileTreeData = message.fileTree || data.fileTree;
       
       if(fileTreeData){
-        // Mount files to WebContainer
         if (webContainer) {
           try {
             await webContainer.mount(fileTreeData);
@@ -264,6 +290,9 @@ const Project = () => {
           setCurrentFile(firstFileName);
           setOpenFiles([firstFileName]);
         }
+
+        // Save the fileTree to localStorage + backend so it survives refresh
+        saveFileTree(fileTreeData);
       }
       pushIncomingMessage(data);
     };
@@ -271,12 +300,67 @@ const Project = () => {
     // Register the listener
     receiveMessage('message', handleMessage);
 
+    // Listen for fileTree updates from teammates
+    receiveMessage('file-tree-update', (data) => {
+      if (data.fileTree) {
+        setFileTree(data.fileTree);
+        if (webContainer) {
+          webContainer.mount(data.fileTree).catch((err) =>
+            console.error("Failed to mount teammate's fileTree:", err)
+          );
+        }
+      }
+    });
+
+    // --- Restore fileTree from localStorage IMMEDIATELY (no network wait) ---
+    try {
+      const localData = localStorage.getItem(`fileTree_${projectId}`);
+      if (localData) {
+        const localTree = JSON.parse(localData);
+        if (localTree && Object.keys(localTree).length > 0) {
+          console.log('[FileTree] Restored from localStorage ✓', Object.keys(localTree));
+          setFileTree(localTree);
+          const firstFile = Object.keys(localTree)[0];
+          setCurrentFile(firstFile);
+          setOpenFiles([firstFile]);
+        }
+      }
+    } catch (e) {
+      console.error('[FileTree] localStorage load failed:', e);
+    }
+
+    // --- Also fetch from database to get latest version ---
     axios.get(`project/get-project/${projectId}`)
       .then((response) => {
-        setProject(response.data.project);
+        const proj = response.data.project;
+        setProject(proj);
+
+        console.log('[FileTree] DB returned fileTree:', proj.fileTree ? 'yes' : 'empty');
+
+        let dbFileTree = null;
+        try {
+          if (proj.fileTree) {
+            dbFileTree = typeof proj.fileTree === 'string'
+              ? JSON.parse(proj.fileTree)
+              : proj.fileTree;
+          }
+        } catch (e) {
+          console.error('[FileTree] DB parse failed:', e);
+        }
+
+        // If DB has data, it's more authoritative — use it
+        if (dbFileTree && Object.keys(dbFileTree).length > 0) {
+          console.log('[FileTree] Using DB version ✓', Object.keys(dbFileTree));
+          setFileTree(dbFileTree);
+          const firstFile = Object.keys(dbFileTree)[0];
+          setCurrentFile(firstFile);
+          setOpenFiles([firstFile]);
+          // Also sync localStorage to match DB
+          localStorage.setItem(`fileTree_${projectId}`, JSON.stringify(dbFileTree));
+        }
       })
       .catch((error) => {
-        console.error("Error fetching project:", error);
+        console.error('[FileTree] DB fetch error:', error.message);
       });
 
     axios
@@ -582,8 +666,6 @@ const Project = () => {
       return;
     }
 
-    const projectId = Location.state?.project?._id || Location.state?.projectId;
-    
     if (!projectId) {
       setAddCollaboratorsError("Project ID is missing. Please reload the page.");
       return;
@@ -843,14 +925,15 @@ const Project = () => {
             onChange={async (newContent) => {
               if (newContent === undefined) return;
               
-              setFileTree((prev) => ({
-                ...prev,
+              const updatedTree = {
+                ...fileTree,
                 [currentFile]: {
                   file: {
                     contents: newContent,
                   },
                 },
-              }));
+              };
+              setFileTree(updatedTree);
               
               // Auto-save to WebContainer when editing
               if (webContainer && currentFile) {
@@ -860,6 +943,9 @@ const Project = () => {
                   console.error("Failed to save file:", err);
                 }
               }
+
+              // Auto-save to database & broadcast to teammates
+              saveFileTree(updatedTree);
             }}
             options={{
               minimap: { enabled: true },

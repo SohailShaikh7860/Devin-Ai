@@ -13,7 +13,7 @@ const AppRoutes = () => {
         <Route path="/" element={<AuthMid><Home /></AuthMid>} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/project" element={<AuthMid><Project /></AuthMid>} />
+        <Route path="/project/:projectId" element={<AuthMid><Project /></AuthMid>} />
       </Routes>
     </BrowserRouter>
   )

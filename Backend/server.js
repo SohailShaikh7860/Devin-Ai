@@ -201,6 +201,19 @@ io.on('connection',async (socket)=>{
               email: 'AI Bot'
             }
           };
+
+          // Persist AI-generated fileTree to database as JSON string
+          if (aiResponse.fileTree) {
+            try {
+              await Project.findOneAndUpdate(
+                { _id: socket.Project._id },
+                { fileTree: JSON.stringify(aiResponse.fileTree) }
+              );
+              console.log('AI fileTree saved to DB for project:', socket.Project._id);
+            } catch (dbErr) {
+              console.error('Failed to save AI fileTree to DB:', dbErr.message);
+            }
+          }
           
           io.to(socket.Project._id.toString()).emit('message', messageToSend);
         } catch (error) {
@@ -223,6 +236,24 @@ io.on('connection',async (socket)=>{
       socket.broadcast.to(socket.Project._id.toString()).emit('message',data);
      })
 
+
+     // Listen for fileTree updates from any user and save to DB
+     socket.on('update-file-tree', async (data) => {
+       try {
+         if (data.fileTree) {
+           await Project.findOneAndUpdate(
+             { _id: socket.Project._id },
+             { fileTree: JSON.stringify(data.fileTree) }
+           );
+           socket.broadcast.to(socket.Project._id.toString()).emit('file-tree-update', {
+             fileTree: data.fileTree,
+             sender: socket.user
+           });
+         }
+       } catch (err) {
+         console.error('Failed to save fileTree update:', err.message);
+       }
+     });
 
      socket.on('disconnect',()=>{
       console.log('Socket disconnected');

@@ -15,7 +15,12 @@ const projectSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
     }
-    ]
+    ],
+
+    fileTree:{
+        type: String,
+        default: '{}',
+    }
 })
 
 const Project = mongoose.model('Project', projectSchema)
