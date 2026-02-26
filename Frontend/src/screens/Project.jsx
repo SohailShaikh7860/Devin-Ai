@@ -741,112 +741,177 @@ const Project = () => {
   return (
     <main className="h-screen w-screen flex relative overflow-hidden">
       {/* Connection Status Indicator */}
-      <div className={`fixed top-2 left-2 z-50 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 transition-all ${
+      <div className={`fixed top-2 left-2 z-50 px-3 py-1.5 rounded-full text-[11px] font-medium flex items-center gap-2 transition-all duration-300 ${
         isSocketConnected 
-          ? 'bg-green-500 text-white' 
-          : 'bg-red-500 text-white animate-pulse'
+          ? 'bg-neutral-900 text-neutral-400 border border-neutral-800' 
+          : 'bg-neutral-900 text-red-400 border border-red-900/50 animate-pulse'
       }`}>
-        <span className={`w-2 h-2 rounded-full ${isSocketConnected ? 'bg-white' : 'bg-white'}`}></span>
+        <span className={`w-1.5 h-1.5 rounded-full ${isSocketConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
         {isSocketConnected ? 'Connected' : socketError || 'Reconnecting...'}
       </div>
 
-      <section className="left flex flex-col h-full w-96 min-w-96 max-w-96 bg-slate-300">
-        <header className="flex-shrink-0 flex justify-between items-center p-2 px-4 w-full bg-slate-100">
+      <section className="left flex flex-col h-full w-96 min-w-96 max-w-96 bg-black border-r border-neutral-800">
+        {/* Header */}
+        <header className="flex-shrink-0 flex justify-between items-center p-3 px-4 w-full bg-black border-b border-neutral-800">
           <button
             onClick={() => setIsUsersModalOpen(true)}
-            className="flex gap-2 items-center text-black text-sm hover:bg-slate-200 px-3 py-2 rounded-md transition cursor-pointer"
+            className="flex gap-2 items-center text-neutral-400 text-sm hover:text-white hover:bg-neutral-900 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer"
           >
-            <i className="ri-add-line mr-1"></i>
-            <p>Add Collaborators</p>
+            <i className="ri-user-add-line"></i>
+            <p className="font-medium">Add Collaborators</p>
           </button>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-600 font-medium">AI Model:</label>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-neutral-900 rounded-lg px-2.5 py-1.5 border border-neutral-800">
+              <i className="ri-robot-2-line text-xs text-neutral-500"></i>
               <select 
                 value={aiProvider}
                 onChange={(e) => setAiProvider(e.target.value)}
-                className="px-2 py-1 rounded border border-gray-300 bg-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                className="bg-transparent text-xs font-medium focus:outline-none text-neutral-300 cursor-pointer"
               >
-                <option value="gemini">Gemini</option>
-                <option value="huggingface">Hugging Face</option>
-                <option value="openai">OpenAI</option>
+                <option value="gemini" className="bg-black">Gemini</option>
+                <option value="huggingface" className="bg-black">Hugging Face</option>
+                <option value="openai" className="bg-black">OpenAI</option>
               </select>
             </div>
 
             <button
-              className="p-2 cursor-pointer hover:bg-slate-200 rounded-md transition"
+              className="p-2 cursor-pointer hover:bg-neutral-900 rounded-lg transition-all duration-200 text-neutral-400 hover:text-white"
               onClick={() => setIsSidePanelOpen(!isSidePanelOpen)}
             >
-              <i className="ri-group-fill text-black"></i>
+              <i className="ri-team-fill"></i>
             </button>
           </div>
         </header>
 
-        <div className="conversation-area flex-1 flex flex-col relative overflow-hidden">
-          <div className="message-box p-2 flex-1 flex flex-col gap-1 overflow-y-auto" ref={messageRef}>
+        {/* Messages Area */}
+        <div className="conversation-area flex-1 flex flex-col relative overflow-hidden bg-black">
+          <div
+            className="message-box p-3 flex-1 flex flex-col gap-4 overflow-y-auto"
+            ref={messageRef}
+            style={{ scrollbarWidth: 'thin', scrollbarColor: '#262626 transparent' }}
+          >
+            {messages.length === 0 && (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 select-none">
+                <i className="ri-chat-3-line text-4xl text-neutral-700"></i>
+                <p className="text-sm text-neutral-600">No messages yet</p>
+                <p className="text-xs text-neutral-700 text-center px-4">
+                  Type <span className="text-white font-medium">@ai</span> followed by a prompt to generate code
+                </p>
+              </div>
+            )}
             {messages.map((m, idx) => {
               const isIncoming = m.incoming !== false;
               const isAi = m.sender === 'ai-bot' || m.sender?._id === 'ai-bot';
+              const senderEmail = m.senderEmail || m.sender?.email || 'Unknown';
+              const initial = isAi ? 'AI' : senderEmail.charAt(0).toUpperCase();
+
               return (
                 <div
                   key={idx}
-                  className={`text-black p-2 bg-white flex flex-col w-fit rounded-md max-w-56 ${!isIncoming ? 'ml-auto' : ''}`}
+                  className={`flex gap-2.5 max-w-[90%] ${!isIncoming ? 'ml-auto flex-row-reverse' : ''}`}
                 >
-                  <small className="opacity-65 text-xs">{m.senderEmail || m.sender?.email || 'Unknown'}</small>
-                  <div className="text-sm overflow-auto bg-slate-900 text-white">
-                    {isAi ? <Markdown>{m.message}</Markdown> : <span>{m.message}</span>}
+                  {/* Avatar */}
+                  <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5 ${
+                    isAi
+                      ? 'bg-white text-black'
+                      : !isIncoming
+                      ? 'bg-neutral-700 text-white'
+                      : 'bg-neutral-800 text-neutral-300'
+                  }`}>
+                    {isAi ? <i className="ri-robot-2-fill text-[10px]"></i> : initial}
+                  </div>
+
+                  {/* Message Bubble */}
+                  <div className={`flex flex-col gap-1 ${!isIncoming ? 'items-end' : 'items-start'}`}>
+                    <span className={`text-[10px] font-medium px-1 ${
+                      isAi ? 'text-neutral-500' : !isIncoming ? 'text-neutral-500' : 'text-neutral-600'
+                    }`}>
+                      {isAi ? 'AI Assistant' : senderEmail}
+                    </span>
+                    <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                      isAi
+                        ? 'bg-neutral-900 text-neutral-200 border border-neutral-800 rounded-tl-sm'
+                        : !isIncoming
+                        ? 'bg-white text-black rounded-tr-sm'
+                        : 'bg-neutral-900 text-neutral-300 border border-neutral-800 rounded-tl-sm'
+                    }`}>
+                      {isAi ? (
+                        <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-black prose-pre:rounded-lg prose-pre:border prose-pre:border-neutral-800 prose-code:text-neutral-300 prose-p:my-1 prose-headings:text-white">
+                          <Markdown>{m.message}</Markdown>
+                        </div>
+                      ) : (
+                        <span className="whitespace-pre-wrap">{m.message}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="inputField w-full flex flex-shrink-0 border-t border-slate-400">
-            <input
-              type="text"
-              name=""
-              value={messageInput}
-              onChange={(e)=> setMessageInput(e.target.value)}
-              onKeyDown={handleChatKeyDown}
-              placeholder="Enter Message"
-              className="p-3 px-5 border-none outline-none bg-white text-black flex-1"
-            />
-
-            <button className="cursor-pointer bg-black px-4 hover:bg-gray-800 transition" onClick={send}>
-              <i className="ri-send-plane-fill text-white"></i>
-            </button>
+          {/* Input Area */}
+          <div className="inputField w-full flex-shrink-0 p-3 bg-black border-t border-neutral-800">
+            <div className="flex items-center gap-2 bg-neutral-900 rounded-xl border border-neutral-800 focus-within:border-neutral-600 transition-all duration-200">
+              <input
+                type="text"
+                value={messageInput}
+                onChange={(e)=> setMessageInput(e.target.value)}
+                onKeyDown={handleChatKeyDown}
+                placeholder="Type a message... ( @ai for AI )"
+                className="flex-1 p-3 px-4 bg-transparent border-none outline-none text-white text-sm placeholder-neutral-600"
+              />
+              <button
+                className="cursor-pointer m-1.5 px-4 py-2 bg-white hover:bg-neutral-200 active:scale-95 rounded-lg transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                onClick={send}
+                disabled={!messageInput.trim()}
+              >
+                <i className="ri-send-plane-2-fill text-black text-sm"></i>
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Side Panel */}
       <div
-        className={`sidePanel w-64 h-full bg-slate-200 fixed right-0 top-0 transform transition-transform duration-300 ease-in-out shadow-lg ${
+        className={`sidePanel w-72 h-full bg-black fixed right-0 top-0 transform transition-transform duration-300 ease-in-out shadow-2xl z-40 border-l border-neutral-800 ${
           isSidePanelOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <header className="flex items-center justify-between p-4 bg-slate-100 border-b">
-          <h2 className="text-lg font-semibold text-black">Team Members</h2>
+        <header className="flex items-center justify-between p-4 bg-black border-b border-neutral-800">
+          <div className="flex items-center gap-2">
+            <i className="ri-team-fill text-neutral-500"></i>
+            <h2 className="text-base font-semibold text-white">Team Members</h2>
+          </div>
           <button
             onClick={() => setIsSidePanelOpen(false)}
-            className="text-black"
+            className="text-neutral-500 hover:text-white hover:bg-neutral-900 p-1.5 rounded-lg transition-all duration-200"
           >
-            <i className="ri-close-line text-xl"></i>
+            <i className="ri-close-line text-lg"></i>
           </button>
         </header>
-        <div className="p-4">
-          <div className="users flex flex-col gap-2">
+        <div className="p-3">
+          <div className="users flex flex-col gap-1">
             {project && project.users && project.users.map((user, index) => (
-              <div key={index} className="user flex gap-2 items-center cursor-pointer hover:bg-slate-300 p-2 rounded">
-                <div className="aspect-square rounded-full w-10 h-10 flex items-center justify-center bg-slate-700 relative">
-                  <i className="ri-user-fill text-white"></i>
+              <div key={index} className="user flex gap-3 items-center p-2.5 rounded-xl hover:bg-neutral-900 transition-all duration-200 cursor-pointer group">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center bg-neutral-800 text-white text-sm font-bold border border-neutral-700">
+                  {(user.email || 'U').charAt(0).toUpperCase()}
                 </div>
-                <h1 className="font-semibold text-black text-lg">{user.email || 'User'}</h1>
+                <div className="flex-1 min-w-0">
+                  <h1 className="font-medium text-neutral-300 text-sm truncate group-hover:text-white transition-colors">{user.email || 'User'}</h1>
+                  <p className="text-[10px] text-green-500 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
+                    Online
+                  </p>
+                </div>
               </div>
             ))}
             {(!project || !project.users || project.users.length === 0) && (
-              <p className="text-sm text-gray-600">No team members yet</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <i className="ri-user-line text-3xl mb-2 text-neutral-700"></i>
+                <p className="text-sm text-neutral-600">No team members yet</p>
+              </div>
             )}
           </div>
         </div>
