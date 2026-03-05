@@ -44,7 +44,12 @@ const Project = () => {
   const terminalWriterRef = useRef(null);
   const terminalOutputRef = useRef(null);
   const runProcessRef = useRef(null); // Track the current run process
-  
+
+  // Refs to always hold the latest values inside stale closures
+  const fileTreeRef = useRef({});
+  const webContainerRef = useRef(null);
+  const currentFileRef = useRef(null);
+
   // Socket connection status
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [socketError, setSocketError] = useState(null);
@@ -59,6 +64,11 @@ const Project = () => {
   const [newItemName, setNewItemName] = useState("");
 
   const navigate = useNavigate();
+
+  // Keep refs in sync so stale closures always read the latest value
+  useEffect(() => { fileTreeRef.current = fileTree; }, [fileTree]);
+  useEffect(() => { webContainerRef.current = webContainer; }, [webContainer]);
+  useEffect(() => { currentFileRef.current = currentFile; }, [currentFile]);
 
   // auto-scroll when messages change
   useEffect(() => {
@@ -277,27 +287,39 @@ const Project = () => {
         };
       }
 
-      
       const fileTreeData = message.fileTree || data.fileTree;
       
-      if(fileTreeData){
-        if (webContainer) {
+      if (fileTreeData) {
+        // Mount new files into WebContainer using the up-to-date ref
+        if (webContainerRef.current) {
           try {
-            await webContainer.mount(fileTreeData);
+            await webContainerRef.current.mount(fileTreeData);
           } catch (err) {
             console.error("Failed to mount files to WebContainer:", err);
           }
         }
-        setFileTree(fileTreeData || {});
-        
-        if (!currentFile && Object.keys(fileTreeData).length > 0) {
+
+        // Use functional updater — React always passes the LATEST state as `prev`
+        // This is the safest way to merge regardless of stale closures
+        let mergedTree;
+        setFileTree(prev => {
+          mergedTree = { ...prev, ...fileTreeData };
+          return mergedTree;
+        });
+
+        // Open the first AI file if nothing is open yet
+        if (!currentFileRef.current && Object.keys(fileTreeData).length > 0) {
           const firstFileName = Object.keys(fileTreeData)[0];
           setCurrentFile(firstFileName);
-          setOpenFiles([firstFileName]);
+          setOpenFiles((prev) =>
+            prev.includes(firstFileName) ? prev : [...prev, firstFileName]
+          );
         }
 
-        // Save the fileTree to localStorage + backend so it survives refresh
-        saveFileTree(fileTreeData);
+        // Save after a tick so mergedTree is populated from the updater above
+        setTimeout(() => {
+          if (mergedTree) saveFileTree(mergedTree);
+        }, 0);
       }
       pushIncomingMessage(data);
     };
@@ -305,12 +327,13 @@ const Project = () => {
     // Register the listener
     receiveMessage('message', handleMessage);
 
-    // Listen for fileTree updates from teammates
+    // Listen for fileTree updates from teammates — merge, don't replace
     receiveMessage('file-tree-update', (data) => {
       if (data.fileTree) {
-        setFileTree(data.fileTree);
-        if (webContainer) {
-          webContainer.mount(data.fileTree).catch((err) =>
+        const mergedTree = { ...fileTreeRef.current, ...data.fileTree };
+        setFileTree(mergedTree);
+        if (webContainerRef.current) {
+          webContainerRef.current.mount(data.fileTree).catch((err) =>
             console.error("Failed to mount teammate's fileTree:", err)
           );
         }
@@ -353,15 +376,22 @@ const Project = () => {
           console.error('[FileTree] DB parse failed:', e);
         }
 
-        // If DB has data, it's more authoritative — use it
+        // Merge DB version with any files already in state (e.g. created while DB was loading)
         if (dbFileTree && Object.keys(dbFileTree).length > 0) {
-          console.log('[FileTree] Using DB version ✓', Object.keys(dbFileTree));
-          setFileTree(dbFileTree);
-          const firstFile = Object.keys(dbFileTree)[0];
-          setCurrentFile(firstFile);
-          setOpenFiles([firstFile]);
-          // Also sync localStorage to match DB
-          localStorage.setItem(`fileTree_${projectId}`, JSON.stringify(dbFileTree));
+          console.log('[FileTree] Merging DB version ✓', Object.keys(dbFileTree));
+          setFileTree(prev => {
+            const merged = { ...prev, ...dbFileTree };
+            // Sync localStorage with the final merged tree
+            try {
+              localStorage.setItem(`fileTree_${projectId}`, JSON.stringify(merged));
+            } catch (_) {}
+            return merged;
+          });
+          setCurrentFile(prev => prev || Object.keys(dbFileTree)[0]);
+          setOpenFiles(prev => {
+            const firstFile = Object.keys(dbFileTree)[0];
+            return prev.length > 0 ? prev : [firstFile];
+          });
         }
       })
       .catch((error) => {

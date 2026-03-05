@@ -93,11 +93,11 @@ const parseCookies = (cookieHeader) => {
 
 io.use(async(socket, next) => {
   try {
-    // Try to get token from auth, authorization header, or cookies
+
     let token = socket.handshake.auth.token || 
                 socket.handshake.headers['authorization']?.split(' ')[1];
     
-    // If no token found, try reading from cookies
+    
     if (!token) {
       const cookieHeader = socket.handshake.headers.cookie;
       const cookies = parseCookies(cookieHeader);
@@ -202,14 +202,24 @@ io.on('connection',async (socket)=>{
             }
           };
 
-          // Persist AI-generated fileTree to database as JSON string
+          // Persist AI-generated fileTree to database — merge with existing files
           if (aiResponse.fileTree) {
             try {
+              const existingProject = await Project.findById(socket.Project._id);
+              let existingFileTree = {};
+              if (existingProject?.fileTree) {
+                try {
+                  existingFileTree = typeof existingProject.fileTree === 'string'
+                    ? JSON.parse(existingProject.fileTree)
+                    : existingProject.fileTree;
+                } catch (_) {}
+              }
+              const mergedFileTree = { ...existingFileTree, ...aiResponse.fileTree };
               await Project.findOneAndUpdate(
                 { _id: socket.Project._id },
-                { fileTree: JSON.stringify(aiResponse.fileTree) }
+                { fileTree: JSON.stringify(mergedFileTree) }
               );
-              console.log('AI fileTree saved to DB for project:', socket.Project._id);
+              console.log('AI fileTree merged and saved to DB for project:', socket.Project._id);
             } catch (dbErr) {
               console.error('Failed to save AI fileTree to DB:', dbErr.message);
             }
