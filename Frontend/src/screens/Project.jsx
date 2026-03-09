@@ -756,19 +756,23 @@ const Project = () => {
     });
   };
 
-  // Filter users based on search query
+  // Filter users based on search query, excluding already-added collaborators
   useEffect(() => {
+    const existingCollaboratorIds = new Set(
+      (project?.users || []).map((u) => u._id)
+    );
+
+    const nonCollaborators = users.filter((u) => !existingCollaboratorIds.has(u._id));
+
     if (!userSearchQuery.trim()) {
-      setFilteredUsers(users);
+      setFilteredUsers(nonCollaborators);
     } else {
       const query = userSearchQuery.toLowerCase().trim();
-      const filtered = users.filter((user) => {
-        const email = user.email?.toLowerCase() || '';
-        return email.includes(query);
-      });
-      setFilteredUsers(filtered);
+      setFilteredUsers(
+        nonCollaborators.filter((u) => (u.email?.toLowerCase() || '').includes(query))
+      );
     }
-  }, [userSearchQuery, users]);
+  }, [userSearchQuery, users, project]);
 
   const confirmNewItem = () => {
     const name = newItemName.trim();
